@@ -2,10 +2,10 @@
 
 Minimal macOS menu bar app — single click to mute / unmute **all** microphones system-wide.
 
-| State   | Icon        |
-|---------|-------------|
-| Active  | `mic.fill` (solid mic) |
-| Muted   | `mic.slash.fill` (mic with slash) |
+| Icon |
+| --- |
+| `mic.fill` (solid mic) |
+| `mic.slash.fill` (mic with slash) |
 
 ## Features
 
@@ -51,3 +51,7 @@ defaults delete com.micmute.app
 ## Size
 
 The compiled binary is well under 500 KB (typically ~100–200 KB).
+
+## Credits
+This app has been brought into existance entirely by Claude and Gemini. (in 2-3 shots).
+So, All thanks to Claude and Gemini and no thanks to [me](https://github.com/AvikArefin) or [Humam](https://github.com/humam-hossain/)

@@ -9,16 +9,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let hud     = MuteHUD()
     private let prefs   = PreferencesWindow()
 
-    // MARK: - Preferences
-
-    private var showIcon: Bool {
-        get { UserDefaults.standard.object(forKey: "showMenuBarIcon") as? Bool ?? true }
-        set {
-            UserDefaults.standard.set(newValue, forKey: "showMenuBarIcon")
-            statusItem.isVisible = newValue
-        }
-    }
-
     // MARK: - Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -29,7 +19,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.isVisible = showIcon
 
         if let btn = statusItem.button {
             btn.target = self
@@ -45,20 +34,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         updateMenuBarIcon()
 
-        prefs.onToggle = { [weak self] in self?.toggleMic() }
-        prefs.onIconChanged = { [weak self] show in
-            self?.showIcon = show
-            if show { self?.updateMenuBarIcon() }
-        }
-
         hotkeys.install(delegate: self)
     }
 
     /// Re-opening the .app while running restores the icon and shows preferences.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        showIcon = true
         updateMenuBarIcon()
-        prefs.show()
+        if let btn = statusItem.button {
+            prefs.show(relativeTo: btn)
+        }
         return false
     }
 
@@ -66,17 +50,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func toggleMic() { mic.toggle() }
 
-    func toggleIcon() {
-        showIcon.toggle()
-        if showIcon { updateMenuBarIcon() }
-    }
-
     // MARK: - Private
 
     @objc private func onClick() {
-        guard let event = NSApp.currentEvent else { return }
+        guard let event = NSApp.currentEvent, let btn = statusItem.button else { return }
         if event.type == .rightMouseUp {
-            prefs.show()
+            prefs.show(relativeTo: btn)
         } else {
             toggleMic()
         }
@@ -98,7 +77,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let defaults = UserDefaults.standard
         let versionKey = "prefsVersion"
         if defaults.integer(forKey: versionKey) < 3 {
-            defaults.removeObject(forKey: "showMenuBarIcon")
             defaults.set(3, forKey: versionKey)
         }
     }

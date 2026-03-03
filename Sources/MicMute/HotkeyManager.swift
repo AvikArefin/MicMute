@@ -25,7 +25,6 @@ func carbonHotkeyHandler(
     DispatchQueue.main.async {
         switch hkID.id {
         case 1: delegate.toggleMic()    // ⌘⇧M
-        case 2: delegate.toggleIcon()   // ⌥⌘M
         default: break
         }
     }
@@ -38,7 +37,6 @@ func carbonHotkeyHandler(
 ///
 /// Hotkeys (no Fn key ever needed):
 ///   ⌘⇧M  — toggle mute
-///   ⌥⌘M  — toggle menu bar icon
 final class HotkeyManager {
 
     private var handlerRef: EventHandlerRef?
@@ -63,7 +61,6 @@ final class HotkeyManager {
 
         let sig: FourCharCode = 0x4D4D5554   // "MMUT"
         register(kVK_ANSI_M, UInt32(cmdKey | shiftKey), sig, id: 1)   // ⌘⇧M → mute
-        register(kVK_ANSI_M, UInt32(optionKey | cmdKey), sig, id: 2)  // ⌥⌘M  → icon
     }
 
     private func register(_ keyCode: Int, _ mods: UInt32, _ sig: FourCharCode, id: UInt32) {

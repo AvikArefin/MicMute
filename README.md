@@ -7,7 +7,7 @@ A clean, minimal macOS menu bar app to mute / unmute all microphones system-wide
 - **Global hotkeys** (no Fn key needed) — toggle mute in any app  
 - **Menu bar icon** — click to toggle, right-click for preferences  
 - **Visual feedback** — brief translucent HUD overlay on every toggle  
-- **Preferences window** — configure volume, show/hide icon, start at login  
+- **Preferences window** — configure volume, start at login  
 - **All input devices** — built-in mic, USB, webcam, etc.  
 - **Customizable unmute volume** — choose 25% to 100% (defaults to 60%)  
 - **Auto-launch at login** — via macOS `SMAppService`  
@@ -20,7 +20,6 @@ A clean, minimal macOS menu bar app to mute / unmute all microphones system-wide
 | Shortcut | Action |
 |----------|--------|
 | `⌘⇧M` | Toggle microphone mute |
-| `⌥⌘M` | Toggle menu bar icon visibility |
 
 Both work globally — no need for Fn key, works in any app or fullscreen.
 
@@ -55,14 +54,9 @@ defaults delete com.micmute.app
 
 **Right-click icon** → Open preferences window:
 - Status indicator (red = muted, green = active)  
-- Mute / Unmute button  
 - Hotkey reference  
-- Unmute volume picker (25%, 50%, 60%, 75%, 100%)  
-- Show/hide menu bar icon  
 - Toggle auto-launch at login  
 - Quit button  
-
-**Icon hidden?** Simply press `⌥⌘M` to restore it, or re-open `/Applications/MicMute.app`.
 
 ## Architecture
 

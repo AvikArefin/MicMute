@@ -1,55 +1,37 @@
 import AppKit
 import ServiceManagement
 
-/// Right-click preferences window.
-/// Left-click the menu bar icon to toggle mute; right-click to open this.
+/// A professionally-designed macOS preferences popover.
 final class PreferencesWindow: NSObject {
 
-    // Callbacks wired up by AppDelegate
-    var onToggle: (() -> Void)?
-    var onIconChanged: ((Bool) -> Void)?
-
-    private var window: NSWindow?
+    private var popover: NSPopover?
 
     // Dynamic controls
     private var statusIcon:  NSImageView!
     private var statusLabel: NSTextField!
-    private var muteBtn:     NSButton!
-    private var volumePopup: NSPopUpButton!
-    private var iconCheck:   NSButton!
     private var loginCheck:  NSButton!
-
-    private let volumeLevels = [25, 50, 60, 75, 100]
 
     // MARK: - Public
 
-    func show() {
-        if window == nil { build() }
+    func show(relativeTo button: NSButton) {
+        if popover == nil { build() }
         refresh()
-        window!.center()
-        window!.makeKeyAndOrderFront(nil)
+        popover?.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         NSApp.activate(ignoringOtherApps: true)
     }
 
     func refresh() {
-        guard window != nil else { return }
+        guard popover != nil else { return }
         let muted = Mic.shared.isMuted
 
         statusIcon.image = NSImage(
             systemSymbolName: muted ? "mic.slash.fill" : "mic.fill",
             accessibilityDescription: nil
-        )?.withSymbolConfiguration(.init(pointSize: 24, weight: .medium))
+        )?.withSymbolConfiguration(.init(pointSize: 18, weight: .semibold))
+        
         statusIcon.contentTintColor = muted ? .systemRed : .systemGreen
-        statusLabel.stringValue     = muted ? "Microphone is Muted" : "Microphone is Active"
+        statusLabel.stringValue     = muted ? "Microphone Muted" : "Microphone Active"
         statusLabel.textColor       = muted ? .systemRed : .labelColor
-        muteBtn.title               = muted ? "  Unmute  " : "  Mute  "
-
-        if let idx = volumeLevels.firstIndex(of: Mic.shared.unmuteVolume) {
-            volumePopup.selectItem(at: idx)
-        }
-
-        let showIcon = UserDefaults.standard.object(forKey: "showMenuBarIcon") as? Bool ?? true
-        iconCheck.state = showIcon ? .on : .off
 
         if #available(macOS 13.0, *) {
             loginCheck.state = (SMAppService.mainApp.status == .enabled) ? .on : .off
@@ -59,178 +41,85 @@ final class PreferencesWindow: NSObject {
     // MARK: - Build
 
     private func build() {
-        let win = NSWindow(
-            contentRect: NSMakeRect(0, 0, 320, 10),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        win.title                = "MicMute"
-        win.isReleasedWhenClosed = false
+        let controller = NSViewController()
+        let view = NSView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        controller.view = view
 
-        let stack = makeStack(axis: .vertical, spacing: 8)
-        stack.alignment  = .centerX
-        stack.edgeInsets = NSEdgeInsets(top: 24, left: 24, bottom: 24, right: 24)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        let cv = win.contentView!
-        cv.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: cv.topAnchor),
-            stack.leadingAnchor.constraint(equalTo: cv.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: cv.trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: cv.bottomAnchor),
-        ])
-
-        addStatusSection(to: stack)
-        stack.addArrangedSubview(makeDivider())
-        stack.setCustomSpacing(14, after: stack.arrangedSubviews.last!)
-
-        addShortcutsSection(to: stack)
-        stack.addArrangedSubview(makeDivider())
-        stack.setCustomSpacing(14, after: stack.arrangedSubviews.last!)
-
-        addSettingsSection(to: stack)
-        stack.addArrangedSubview(makeDivider())
-        stack.setCustomSpacing(14, after: stack.arrangedSubviews.last!)
-
-        let quitBtn = NSButton(title: "Quit MicMute",
-                               target: NSApp,
-                               action: #selector(NSApplication.terminate))
-        quitBtn.bezelStyle = .rounded
-        stack.addArrangedSubview(quitBtn)
-
-        cv.layoutSubtreeIfNeeded()
-        let fit = stack.fittingSize
-        win.setContentSize(NSSize(width: max(320, fit.width), height: fit.height))
-        window = win
-    }
-
-    // MARK: - Section builders
-
-    private func addStatusSection(to stack: NSStackView) {
-        let row = makeStack(axis: .horizontal, spacing: 8)
-        row.alignment = .centerY
-
+        // 1. Header (Status) - Preserved as requested
+        let headerView = NSView()
+        headerView.translatesAutoresizingMaskIntoConstraints = false
+        headerView.wantsLayer = true
+        headerView.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.04).cgColor
+        
         statusIcon = NSImageView()
         statusIcon.translatesAutoresizingMaskIntoConstraints = false
-        statusIcon.widthAnchor.constraint(equalToConstant: 28).isActive  = true
-        statusIcon.heightAnchor.constraint(equalToConstant: 28).isActive = true
-
+        
         statusLabel = NSTextField(labelWithString: "")
-        statusLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+        statusLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        
+        let headerStack = NSStackView(views: [statusIcon, statusLabel])
+        headerStack.spacing = 10
+        headerStack.alignment = .centerY
+        headerStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        headerView.addSubview(headerStack)
+        NSLayoutConstraint.activate([
+            headerStack.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
+            headerStack.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            headerView.heightAnchor.constraint(equalToConstant: 54)
+        ])
 
-        row.addArrangedSubview(statusIcon)
-        row.addArrangedSubview(statusLabel)
-        stack.addArrangedSubview(row)
-        stack.setCustomSpacing(14, after: row)
+        // 2. Settings Row (Login)
+        let loginLabel = bodyLabel("Start at Login")
+        loginCheck = NSButton(checkboxWithTitle: "", target: self, action: #selector(loginCheckChanged))
+        loginCheck.controlSize = .small
+        let loginRow = NSStackView(views: [loginLabel, loginCheck])
+        loginRow.spacing = 8
 
-        muteBtn = NSButton(title: "  Mute  ", target: self, action: #selector(muteTapped))
-        muteBtn.bezelStyle  = .rounded
-        muteBtn.controlSize = .large
-        muteBtn.font        = .systemFont(ofSize: 14, weight: .medium)
-        stack.addArrangedSubview(muteBtn)
-        stack.setCustomSpacing(18, after: muteBtn)
-    }
+        // 3. Shortcut Section (Simplified & Centered)
+        let shortcutKey = bodyLabel("⌘⇧M")
+        shortcutKey.font = .monospacedSystemFont(ofSize: 11, weight: .bold)
+        shortcutKey.textColor = .secondaryLabelColor
+        let shortcutDesc = bodyLabel("Toggle Mute")
+        shortcutDesc.textColor = .secondaryLabelColor
+        
+        let shortcutRow = NSStackView(views: [shortcutKey, shortcutDesc])
+        shortcutRow.spacing = 6
 
-    private func addShortcutsSection(to stack: NSStackView) {
-        stack.addArrangedSubview(sectionLabel("Keyboard Shortcuts"))
-        stack.setCustomSpacing(6, after: stack.arrangedSubviews.last!)
+        // 4. Footer (Proper Button)
+        let quitBtn = NSButton(title: "Quit MicMute", target: NSApp, action: #selector(NSApplication.terminate))
+        quitBtn.bezelStyle = .rounded
+        quitBtn.controlSize = .regular
+        quitBtn.translatesAutoresizingMaskIntoConstraints = false
 
-        let box = makeStack(axis: .vertical, spacing: 4)
-        box.alignment = .leading
+        // Main Vertical Stack (Centering everything)
+        let mainStack = NSStackView(views: [headerView, loginRow, shortcutRow, quitBtn])
+        mainStack.orientation = .vertical
+        mainStack.spacing = 14
+        mainStack.alignment = .centerX
+        mainStack.translatesAutoresizingMaskIntoConstraints = false
+        mainStack.setCustomSpacing(20, after: headerView)
+        mainStack.setCustomSpacing(20, after: shortcutRow)
+        
+        view.addSubview(mainStack)
+        
+        NSLayoutConstraint.activate([
+            mainStack.topAnchor.constraint(equalTo: view.topAnchor),
+            mainStack.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            mainStack.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            mainStack.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
+            
+            headerView.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
+            view.widthAnchor.constraint(equalToConstant: 240)
+        ])
 
-        let shortcuts: [(key: String, description: String)] = [
-            ("⌘⇧M", "Toggle mute"),
-            ("⌥⌘M", "Toggle menu bar icon"),
-        ]
-        for (key, desc) in shortcuts {
-            let row = makeStack(axis: .horizontal, spacing: 12)
-            row.alignment = .firstBaseline
-
-            let kLbl = NSTextField(labelWithString: key)
-            kLbl.font      = .monospacedSystemFont(ofSize: 11, weight: .medium)
-            kLbl.textColor = .tertiaryLabelColor
-            kLbl.alignment = .right
-            kLbl.translatesAutoresizingMaskIntoConstraints = false
-            kLbl.widthAnchor.constraint(equalToConstant: 44).isActive = true
-
-            let dLbl = NSTextField(labelWithString: desc)
-            dLbl.font      = .systemFont(ofSize: 12)
-            dLbl.textColor = .secondaryLabelColor
-
-            row.addArrangedSubview(kLbl)
-            row.addArrangedSubview(dLbl)
-            box.addArrangedSubview(row)
-        }
-        stack.addArrangedSubview(box)
-        stack.setCustomSpacing(18, after: box)
-    }
-
-    private func addSettingsSection(to stack: NSStackView) {
-        stack.addArrangedSubview(sectionLabel("Settings"))
-        stack.setCustomSpacing(8, after: stack.arrangedSubviews.last!)
-
-        // Unmute volume row
-        let volRow = makeStack(axis: .horizontal, spacing: 8)
-        volRow.alignment = .centerY
-
-        let volLbl = NSTextField(labelWithString: "Unmute volume")
-        volLbl.font = .systemFont(ofSize: 13)
-
-        volumePopup = NSPopUpButton()
-        for v in volumeLevels { volumePopup.addItem(withTitle: "\(v)%") }
-        volumePopup.target = self
-        volumePopup.action = #selector(volumeChanged)
-
-        volRow.addArrangedSubview(volLbl)
-        volRow.addArrangedSubview(volumePopup)
-        stack.addArrangedSubview(volRow)
-
-        // Show in menu bar
-        iconCheck = NSButton(checkboxWithTitle: "Show in menu bar",
-                             target: self, action: #selector(iconCheckChanged))
-        iconCheck.font = .systemFont(ofSize: 13)
-        stack.addArrangedSubview(iconCheck)
-
-        // Start at login
-        loginCheck = NSButton(checkboxWithTitle: "Start at login",
-                              target: self, action: #selector(loginCheckChanged))
-        loginCheck.font = .systemFont(ofSize: 13)
-        stack.addArrangedSubview(loginCheck)
-        stack.setCustomSpacing(18, after: loginCheck)
+        popover = NSPopover()
+        popover?.contentViewController = controller
+        popover?.behavior = .transient
     }
 
     // MARK: - Actions
-
-    @objc private func muteTapped()     { onToggle?() }
-
-    @objc private func volumeChanged()  {
-        let idx = volumePopup.indexOfSelectedItem
-        if volumeLevels.indices.contains(idx) {
-            Mic.shared.unmuteVolume = volumeLevels[idx]
-        }
-    }
-
-    @objc private func iconCheckChanged() {
-        let wantShow = (iconCheck.state == .on)
-        if !wantShow {
-            let alert = NSAlert()
-            alert.messageText     = "Hide Menu Bar Icon?"
-            alert.informativeText =
-                "MicMute keeps running in the background.\n\n" +
-                "Restore the icon anytime:\n" +
-                "  • Press ⌥⌘M\n" +
-                "  • Or re-open MicMute from /Applications"
-            alert.addButton(withTitle: "Hide")
-            alert.addButton(withTitle: "Cancel")
-            guard alert.runModal() == .alertFirstButtonReturn else {
-                iconCheck.state = .on
-                return
-            }
-        }
-        onIconChanged?(wantShow)
-    }
 
     @objc private func loginCheckChanged() {
         if #available(macOS 13.0, *) {
@@ -244,27 +133,11 @@ final class PreferencesWindow: NSObject {
 
     // MARK: - UI helpers
 
-    private func makeStack(axis: NSUserInterfaceLayoutOrientation, spacing: CGFloat) -> NSStackView {
-        let s = NSStackView()
-        s.orientation = axis
-        s.spacing     = spacing
-        return s
-    }
-
-    private func makeDivider() -> NSView {
-        let v = NSView()
-        v.wantsLayer = true
-        v.layer?.backgroundColor = NSColor.separatorColor.cgColor
-        v.translatesAutoresizingMaskIntoConstraints = false
-        v.heightAnchor.constraint(equalToConstant: 1).isActive   = true
-        v.widthAnchor.constraint(equalToConstant: 272).isActive  = true
-        return v
-    }
-
-    private func sectionLabel(_ text: String) -> NSTextField {
+    private func bodyLabel(_ text: String) -> NSTextField {
         let l = NSTextField(labelWithString: text)
-        l.font      = .systemFont(ofSize: 11, weight: .semibold)
-        l.textColor = .secondaryLabelColor
+        l.font = .systemFont(ofSize: 12)
+        l.translatesAutoresizingMaskIntoConstraints = false
+        // Removed the widthAnchor constraint to prevent text cropping
         return l
     }
 }

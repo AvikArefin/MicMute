@@ -11,16 +11,7 @@ final class Mic {
     /// Called on every toggle — use to update UI.
     var onChange: ((Bool) -> Void)?
 
-    private let defaults  = UserDefaults.standard
-    private let volumeKey = "unmuteVolume"
-
-    var unmuteVolume: Int {
-        get {
-            let v = defaults.integer(forKey: volumeKey)
-            return (10...100).contains(v) ? v : 60
-        }
-        set { defaults.set(max(10, min(100, newValue)), forKey: volumeKey) }
-    }
+    let unmuteVolume = 55
 
     private init() { sync() }
 

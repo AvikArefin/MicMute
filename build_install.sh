@@ -9,6 +9,11 @@ APP_NAME="MicMute"
 BUNDLE_ID="com.micmute.app"
 APP_BUNDLE="/Applications/${APP_NAME}.app"
 
+# Kill any existing instance so the NEW binary is what launches
+echo "▶ Stopping existing MicMute…"
+pkill -x "$APP_NAME" 2>/dev/null || true
+sleep 0.5
+
 echo "▶ Building release binary…"
 cd "$SCRIPT_DIR"
 swift build -c release 2>&1
@@ -32,9 +37,13 @@ echo "▶ Done!  Launching ${APP_NAME}…"
 open "${APP_BUNDLE}"
 
 echo ""
-echo "✅  MicMute is running in your menu bar."
-echo "   On first launch macOS may ask for microphone access – please Allow."
-echo "   The app will auto-launch on every login automatically."
+echo "✅  MicMute installed and running."
 echo ""
-echo "   To REMOVE auto-launch later, open System Settings → General → Login Items"
-echo "   and remove MicMute from the list."
+echo "   Left-click icon  → toggle mute"
+echo "   Right-click icon → preferences window"
+echo "   ⌘⇧M              → toggle mute (always works)"
+echo "   ⌥F5              → toggle mute"
+echo "   ⌥⇧F5             → toggle menu bar icon"
+echo ""
+echo "   If icon is hidden: re-open MicMute.app from /Applications"
+echo "   to restore the icon and show preferences."

@@ -1,57 +1,106 @@
 # MicMute 🎤
 
-Minimal macOS menu bar app — single click to mute / unmute **all** microphones system-wide.
-
-| Icon |
-| --- |
-| `mic.fill` (solid mic) |
-| `mic.slash.fill` (mic with slash) |
+A clean, minimal macOS menu bar app to mute / unmute all microphones system-wide. Works instantly — no permissions hassles, no Accessibility prompts.
 
 ## Features
 
-- **Single-click toggle** in the menu bar — nothing else
-- **All input devices** affected (built-in, USB, webcam, etc.)
-- **60 % volume** restored on unmute (not 100 %)
-- **Auto-launches at every login** via `SMAppService`
-- **No Dock icon**, no menu, no terminal window
-- Adapts icon to light / dark menu bar automatically (SF Symbols template)
+- **Global hotkeys** (no Fn key needed) — toggle mute in any app  
+- **Menu bar icon** — click to toggle, right-click for preferences  
+- **Visual feedback** — brief translucent HUD overlay on every toggle  
+- **Preferences window** — configure volume, show/hide icon, start at login  
+- **All input devices** — built-in mic, USB, webcam, etc.  
+- **Customizable unmute volume** — choose 25% to 100% (defaults to 60%)  
+- **Auto-launch at login** — via macOS `SMAppService`  
+- **No Dock icon**, no terminal window — pure menu bar app  
+- **Light & dark mode** — icon adapts automatically  
+- **Tiny footprint** — ~100–200 KB binary  
 
-## Requirements
+## Hotkeys
 
-- macOS 13 Ventura or later
-- Xcode Command Line Tools (`xcode-select --install`)
+| Shortcut | Action |
+|----------|--------|
+| `⌘⇧M` | Toggle microphone mute |
+| `⌥⌘M` | Toggle menu bar icon visibility |
 
-## Install (one command)
+Both work globally — no need for Fn key, works in any app or fullscreen.
+
+## Quick Start
+
+### Install
 
 ```bash
 chmod +x build_install.sh && ./build_install.sh
 ```
 
-That script:
-1. Compiles a release binary with `swift build -c release`
-2. Packages it into `/Applications/MicMute.app`
-3. Ad-hoc signs the bundle
-4. Launches the app immediately
+The script builds, packages, signs, and launches the app in one step.
 
-On first launch macOS will ask for **Microphone** access — click **Allow**.
+**First launch:** macOS may ask for Microphone access — click **Allow**.
 
-## Uninstall
+### Uninstall
 
 ```bash
-Kill the running app
+# Kill the app
 pkill -x MicMute
 
-# Remove the app
+# Remove the app bundle
 rm -rf /Applications/MicMute.app
 
-# Remove from login items (or use System Settings → General → Login Items)
+# Remove from login items (optional)
 defaults delete com.micmute.app
 ```
 
-## Size
+## Usage
 
-The compiled binary is well under 500 KB (typically ~100–200 KB).
+**Left-click icon** → Toggle mute. A visual HUD briefly appears showing the new state.
+
+**Right-click icon** → Open preferences window:
+- Status indicator (red = muted, green = active)  
+- Mute / Unmute button  
+- Hotkey reference  
+- Unmute volume picker (25%, 50%, 60%, 75%, 100%)  
+- Show/hide menu bar icon  
+- Toggle auto-launch at login  
+- Quit button  
+
+**Icon hidden?** Simply press `⌥⌘M` to restore it, or re-open `/Applications/MicMute.app`.
+
+## Architecture
+
+Clean, modular Swift codebase — one responsibility per file:
+
+| File | Purpose |
+|------|---------|
+| `main.swift` | Entry point (7 lines) |
+| `Mic.swift` | Microphone state management & AppleScript control |
+| `HotkeyManager.swift` | Carbon-based global hotkey registration |
+| `MuteHUD.swift` | Translucent center-screen toggle feedback |
+| `PreferencesWindow.swift` | Settings UI (status, volume, toggles) |
+| `AppDelegate.swift` | App lifecycle & component wiring |
+
+## Requirements
+
+- **macOS 13.0+** (Ventura or later)  
+- **Xcode Command Line Tools** (`xcode-select --install`)  
+- **Swift 5.9+** (included with Xcode 15+)
+
+## Build
+
+```bash
+swift build -c release
+# Binary: .build/release/MicMute
+```
+
+## Technical Notes
+
+- Uses **Carbon hotkeys** (not NSEvent) — works globally without Accessibility permission  
+- Uses **AppleScript** for mic control — no private APIs, fully sandboxable  
+- Runs as `.accessory` — no Dock icon, minimal system footprint  
+- Preferences stored in `UserDefaults` — safe, standard macOS practice
+
+## License
+
+Open source — feel free to fork, modify, and redistribute.
 
 ## Credits
-This app has been brought into existance entirely by Claude and Gemini. (in 2-3 shots).
-So, All thanks to Claude and Gemini and no thanks to [me](https://github.com/AvikArefin) or [Humam](https://github.com/humam-hossain/)
+
+Built by [Claude](https://claude.ai) & [Gemini](https://gemini.google.com/).
